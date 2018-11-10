@@ -411,11 +411,8 @@ task :ci do
       test = ''
     end
     # Skip scaffolding test when time up or packaging for iOS, tvOS, and Web platform or when the build config may run out of disk space
-    # For test coverage:
-    # - Staged-install Urho3D SDK when on Travis-CI; normal install when on AppVeyor
-    # - Travis CI uses build tree as scaffolding location while AppVeyor uses source tree
-    # - First scaffolding test uses absolute path while second test uses relative path
     unless ENV['CI'] && ((ENV['IOS'] || ENV['TVOS'] || ENV['WEB']) && ENV['PACKAGE_UPLOAD'] || (ENV['CMAKE_BUILD_TYPE'] == 'Debug' && ENV['URHO3D_LIB_TYPE'] == 'STATIC')) || timeup
+      # Staged-install Urho3D SDK when on Travis-CI; normal install when on AppVeyor
       ENV['DESTDIR'] = ENV['HOME'] unless ENV['APPVEYOR']
       if !wait_for_block("Installing Urho3D SDK to #{ENV['DESTDIR'] ? "#{ENV['DESTDIR']}/usr/local" : 'default system-wide location'}...") { Thread.current[:subcommand_to_kill] = 'xcodebuild'; system "rake make target=install >#{ENV['OS'] ? 'nul' : '/dev/null'}" }
         abort 'Failed to install Urho3D SDK' unless File.exists?('already_timeup.log')
@@ -429,14 +426,14 @@ task :ci do
       ENV['URHO3D_64BIT'] = nil unless ENV['APPVEYOR']    # AppVeyor uses VS generator which always requires URHO3D_64BIT as input variable
       ['URHO3D_LIB_TYPE', 'URHO3D_STATIC_RUNTIME', 'URHO3D_OPENGL', 'URHO3D_D3D11', 'URHO3D_SSE', 'URHO3D_DATABASE_ODBC', 'URHO3D_DATABASE_SQLITE', 'URHO3D_LUAJIT', 'URHO3D_TESTING'].each { |var| ENV[var] = nil }
       # First test - create a new project on the fly that uses newly installed Urho3D SDK
-      Dir.chdir scaffolding "#{Dir.pwd}/#{ENV['APPVEYOR'] ? '.' : ENV['build_tree']}/UsingSDK" do
+      Dir.chdir scaffolding "#{ENV['build_tree']}/UsingSDK" do
         puts "\nConfiguring downstream project using Urho3D SDK...\n\n"; $stdout.flush
         # SDK installation to a system-wide location does not need URHO3D_HOME to be defined, staged-installation does
         system "#{ENV['DESTDIR'] ? 'URHO3D_HOME=~/usr/local' : ''} rake cmake #{generator} && rake make #{test}" or abort 'Failed to configure/build/test temporary downstream project using Urho3D as external library'
       end
       next if timeup
       # Second test - create a new project on the fly that uses newly built Urho3D library in the build tree
-      Dir.chdir scaffolding "#{ENV['APPVEYOR'] ? '.' : ENV['build_tree']}/UsingBuildTree" do
+      Dir.chdir scaffolding "#{ENV['build_tree']}/UsingBuildTree" do
         puts "Configuring downstream project using Urho3D library in its build tree...\n\n"; $stdout.flush
         system "rake cmake #{generator} URHO3D_HOME=#{urho3d_home} && rake make #{test}" or abort 'Failed to configure/build/test temporary downstream project using Urho3D as external library'
       end

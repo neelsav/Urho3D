@@ -120,7 +120,6 @@ environment:
     secure: 6Vuo+sNP2YT/iI4ilNDdyJbKpu1AYxSpkdwjJxeZ3BVXM0XQQnG7VS/6IspV9kgWXmYpeVnUTqpoxAg7GDf3MTN9SeXgwHuSsblIAHDaOJk=
   SF_API:
     secure: gEDrho4yNr5++SbgkWsxQiFA62GJfTLrZU9Dzjz9HCUcS7XwjTGg3XsFm84w6B1s
-  config: Release
 # We cannot afford to have a large matrix on AppVeyor at the moment
   URHO3D_D3D11: 1
   URHO3D_LUAJIT: 1
@@ -218,36 +217,30 @@ after_script: rake ci_delete_mirror
 ---
 
 branch: {name: Android-CI, active: yes}
-language: android
-before_cache:
-  - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
-  - rm -rf $HOME/.gradle/caches/*/plugin-resolution
+dist: trusty
+sudo: required
+addons: {apt: {packages: docker-ce}}
 cache:
   directories:
-    - $HOME/.ccache
-    - $HOME/.gradle/caches
-    - $HOME/.gradle/wrapper
-    - $HOME/.android/build-cache
-dist: trusty
-sudo: false
-addons: {apt: {packages: [doxygen, graphviz, g++-multilib]}}
+    - $HOME/urho3d_home_dir/.ccache
+    - $HOME/urho3d_home_dir/.gradle/caches
+    - $HOME/urho3d_home_dir/.gradle/wrapper
+    - $HOME/urho3d_home_dir/.android/build-cache
+before_cache: rm -f $HOME/urho3d_home_dir/.gradle/caches/modules-2/modules-2.lock
 env:
   global:
     - secure: SLJCjkjDsTMbCIV9Wecz5JATnhk0fuzlnLMeZdvvFDv+8NL8cXyutkU0VfyRSLf3HSD1Js79a6fRMROyVGWj/w/BRrjqGnZzsB6+ZeJNnadiVIF5Gh+w90We5ccvSp2G4DyYgwkNnkKlJK7zNEWGu/K+bHL1EOCA+EIVrFMyA44=
     - secure: ecj/PwpbHkH9AYFsc2TMeRuNm5E3xMM8A0x4AcGhzpwDuZWdFx3R1T4G9u45Z5aUyTJWGqOeX1JPaEVVFZuYnNBKRy0kmiUrM9EE0j7WsT57K48tP1ysn2ynyvHgbYkKOfYR0t8XAMWTBbulT9DVVk3DS69//2WgiXGDVUEJTyI=
     - ANDROID=1
-    - ANDROID_TMP=~/tmp
-    - CCACHE_SLOPPINESS=pch_defines,time_macros
-    - CCACHE_COMPRESS=1
   matrix:
-    - ORG_GRADLE_PROJECT_ANDROID_ABI=x86 ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=STATIC SYS_IMG=android-28 PLATFORM=android-17
-    - ORG_GRADLE_PROJECT_ANDROID_ABI=x86 ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=SHARED SYS_IMG=android-28 PLATFORM=android-17
-    - ORG_GRADLE_PROJECT_ANDROID_ABI=x86_64 ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=STATIC SYS_IMG=android-28 PLATFORM=android-21
-    - ORG_GRADLE_PROJECT_ANDROID_ABI=x86_64 ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=SHARED SYS_IMG=android-28 PLATFORM=android-21
-    - ORG_GRADLE_PROJECT_ANDROID_ABI=armeabi-v7a ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=STATIC SYS_IMG=android-25 PLATFORM=android-17
-    - ORG_GRADLE_PROJECT_ANDROID_ABI=armeabi-v7a ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=SHARED SYS_IMG=android-25 PLATFORM=android-17
-    - ORG_GRADLE_PROJECT_ANDROID_ABI=arm64-v8a ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=STATIC SYS_IMG=android-25 PLATFORM=android-21
-    - ORG_GRADLE_PROJECT_ANDROID_ABI=arm64-v8a ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=SHARED SYS_IMG=android-25 PLATFORM=android-21
+    - ORG_GRADLE_PROJECT_ANDROID_ABI=x86 ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=STATIC
+    - ORG_GRADLE_PROJECT_ANDROID_ABI=x86 ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=SHARED
+    - ORG_GRADLE_PROJECT_ANDROID_ABI=x86_64 ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=STATIC
+    - ORG_GRADLE_PROJECT_ANDROID_ABI=x86_64 ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=SHARED
+    - ORG_GRADLE_PROJECT_ANDROID_ABI=armeabi-v7a ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=STATIC
+    - ORG_GRADLE_PROJECT_ANDROID_ABI=armeabi-v7a ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=SHARED
+    - ORG_GRADLE_PROJECT_ANDROID_ABI=arm64-v8a ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=STATIC
+    - ORG_GRADLE_PROJECT_ANDROID_ABI=arm64-v8a ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE=SHARED
 stage: split ABI build configuration
 before_script:
   - rake ci_timer
@@ -255,11 +248,8 @@ before_script:
   - export COMMIT_MESSAGE=$(git log --format=%B -n1 $TRAVIS_COMMIT)
   - export TAG=$(git describe --exact-match $TRAVIS_COMMIT 2>/dev/null); if [[ $TAG =~ [[:digit:]]+\.[[:digit:]]+ ]]; then export RELEASE_TAG=$TAG; fi
   - if [[ $RELEASE_TAG ]] || (! [[ $TRAVIS_BRANCH =~ [^-]+-[^-]+-CI ]] && echo $COMMIT_MESSAGE |grep -cq '\[ci package\]'); then export PACKAGE_UPLOAD=1; fi
-  - touch $HOME/.android/repositories.cfg && (while :; do echo 'y'; sleep 1; done) |sdkmanager 'tools' 'platform-tools' 'build-tools;28.0.2' "platforms;$PLATFORM" 'ndk-bundle' 'cmake;3.6.4111459' "system-images;$SYS_IMG;google_apis;$ORG_GRADLE_PROJECT_ANDROID_ABI"
-  - export PATH=$(whereis -b ccache |grep -o '\S*lib\S*'):$PATH ANDROID_CCACHE=$(which ccache)
-  - if [[ "$ORG_GRADLE_PROJECT_URHO3D_LIB_TYPE" == "STATIC" ]]; then export EXTRA_PROPS='-P URHO3D_SAMPLES=0'; fi
   - rake ci_setup_cache
-script: ./gradlew -P URHO3D_LUAJIT=1 -P URHO3D_LUAJIT_AMALG=1 $EXTRA_PROPS build publishToMavenLocal && if [[ $PACKAGE_UPLOAD ]]; then rake ci_package_upload; fi && rake ci_timer
+script: script/dockerized.sh android ./gradlew -P URHO3D_LUAJIT=1 build publishToMavenLocal && if [[ $PACKAGE_UPLOAD ]]; then rake ci_package_upload; fi && rake ci_timer
 matrix:
   fast_finish: true
   include: [stage: housekeep]
@@ -393,14 +383,13 @@ env:
     - secure: ecj/PwpbHkH9AYFsc2TMeRuNm5E3xMM8A0x4AcGhzpwDuZWdFx3R1T4G9u45Z5aUyTJWGqOeX1JPaEVVFZuYnNBKRy0kmiUrM9EE0j7WsT57K48tP1ysn2ynyvHgbYkKOfYR0t8XAMWTBbulT9DVVk3DS69//2WgiXGDVUEJTyI=
     - numjobs=3
     - OSX=1
-    - USE_CCACHE=1
     - CCACHE_SLOPPINESS=pch_defines,time_macros
     - CCACHE_COMPRESS=1
   matrix:
-    - &tvOS XCODE=1 TVOS=1 URHO3D_LIB_TYPE=STATIC APPLETVOS_DEPLOYMENT_TARGET=11.2 sdk=appletvsimulator
-    - &iOS XCODE=1 IOS=1 URHO3D_LIB_TYPE=STATIC IPHONEOS_DEPLOYMENT_TARGET=11.2 sdk=iphonesimulator
-    - &macOS-STATIC XCODE=1 URHO3D_LIB_TYPE=STATIC CMAKE_OSX_DEPLOYMENT_TARGET=10.13 SF_DEFAULT=mac:OSX-64bit-STATIC.tar.gz
-    - &macOS-SHARED XCODE=1 URHO3D_LIB_TYPE=SHARED CMAKE_OSX_DEPLOYMENT_TARGET=10.13
+    - XCODE=1 TVOS=1 URHO3D_LIB_TYPE=STATIC APPLETVOS_DEPLOYMENT_TARGET=11.2 sdk=appletvsimulator
+    - XCODE=1 IOS=1 URHO3D_LIB_TYPE=STATIC IPHONEOS_DEPLOYMENT_TARGET=11.2 sdk=iphonesimulator
+    - XCODE=1 URHO3D_LIB_TYPE=STATIC CMAKE_OSX_DEPLOYMENT_TARGET=10.13 SF_DEFAULT=mac:OSX-64bit-STATIC.tar.gz
+    - XCODE=1 URHO3D_LIB_TYPE=SHARED CMAKE_OSX_DEPLOYMENT_TARGET=10.13
     - MAKEFILE=1 URHO3D_LIB_TYPE=STATIC URHO3D_DEPLOYMENT_TARGET=generic
     - MAKEFILE=1 URHO3D_LIB_TYPE=SHARED URHO3D_DEPLOYMENT_TARGET=generic
 stage: release build configuration
@@ -415,7 +404,7 @@ before_script:
   - if [[ $MAKEFILE ]]; then ccache=ccache; fi
   - travis_retry brew install doxygen graphviz $cmake $ccache
   - if [[ ! $cmake ]]; then brew outdated cmake || brew upgrade cmake; fi
-  - if [[ $ccache ]]; then export PATH=$(brew info ccache |grep -o '\S*lib\S*'):$PATH; fi
+  - if [[ $ccache ]]; then export PATH=$(brew info ccache |grep -o '\S*lib\S*'):$PATH USE_CCACHE=1; fi
   - if [[ $XCODE ]]; then export config=Release; if [[ $IOS ]]; then redundant=AppleTV,Watch; elif [[ $TVOS ]]; then redundant=iPhone,Watch; else redundant=iPhone,AppleTV,Watch; fi && eval sudo rm -rf /Applications/Xcode.app/Contents/Developer/Platforms/{$redundant}{OS,Simulator}.platform; fi
 script: rake ci && if [[ $PACKAGE_UPLOAD ]]; then rake ci_package_upload; fi && rake ci_timer
 matrix:
